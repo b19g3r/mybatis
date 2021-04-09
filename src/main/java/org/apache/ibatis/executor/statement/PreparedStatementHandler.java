@@ -35,7 +35,7 @@ import org.apache.ibatis.session.RowBounds;
  */
 /**
  * 预处理语句处理器(PREPARED)
- * 
+ * 性能高, 安全(转义,防止sql注入)
  */
 public class PreparedStatementHandler extends BaseStatementHandler {
 

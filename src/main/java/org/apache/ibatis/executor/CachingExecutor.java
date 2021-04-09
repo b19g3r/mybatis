@@ -40,6 +40,9 @@ import org.apache.ibatis.transaction.Transaction;
  */
 public class CachingExecutor implements Executor {
 
+  /**
+   * 装饰者模式, 通过此对象调用除了二级缓存之外的功能
+   */
   private Executor delegate;
   private TransactionalCacheManager tcm = new TransactionalCacheManager();
 
@@ -57,7 +60,7 @@ public class CachingExecutor implements Executor {
   public void close(boolean forceRollback) {
     try {
       //issues #499, #524 and #573
-      if (forceRollback) { 
+      if (forceRollback) {
         tcm.rollback();
       } else {
         tcm.commit();
@@ -96,12 +99,15 @@ public class CachingExecutor implements Executor {
     //简单的说，就是先查CacheKey，查不到再委托给实际的执行器去查
     if (cache != null) {
       flushCacheIfRequired(ms);
+      // 走二级缓存的条件: 允许使用缓存 且 自定义结果集为空即不能对结果集进行自定义的处理
       if (ms.isUseCache() && resultHandler == null) {
         ensureNoOutParams(ms, parameterObject, boundSql);
         @SuppressWarnings("unchecked")
         List<E> list = (List<E>) tcm.getObject(cache, key);
         if (list == null) {
+          // 未查到缓存后执行查询语句
           list = delegate.<E> query(ms, parameterObject, rowBounds, resultHandler, key, boundSql);
+          // 将结果放到二级缓存
           tcm.putObject(cache, key, list); // issue #578 and #116
         }
         return list;
@@ -162,9 +168,13 @@ public class CachingExecutor implements Executor {
     delegate.clearLocalCache();
   }
 
+  /**
+   * 判断查询前是否需要先清除缓存
+   * @param ms
+   */
   private void flushCacheIfRequired(MappedStatement ms) {
     Cache cache = ms.getCache();
-    if (cache != null && ms.isFlushCacheRequired()) {      
+    if (cache != null && ms.isFlushCacheRequired()) {
       tcm.clear(cache);
     }
   }

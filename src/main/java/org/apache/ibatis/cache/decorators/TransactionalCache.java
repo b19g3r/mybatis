@@ -25,12 +25,12 @@ import org.apache.ibatis.cache.Cache;
 
 /**
  * The 2nd level cache transactional buffer.
- * 
+ *
  * This class holds all cache entries that are to be added to the 2nd level cache during a Session.
- * Entries are sent to the cache when commit is called or discarded if the Session is rolled back. 
- * Blocking cache support has been added. Therefore any get() that returns a cache miss 
- * will be followed by a put() so any lock associated with the key can be released. 
- * 
+ * Entries are sent to the cache when commit is called or discarded if the Session is rolled back.
+ * Blocking cache support has been added. Therefore any get() that returns a cache miss
+ * will be followed by a put() so any lock associated with the key can be released.
+ *
  * @author Clinton Begin
  * @author Eduardo Macarron
  */
@@ -43,8 +43,10 @@ public class TransactionalCache implements Cache {
 
   private Cache delegate;
   //commit时要不要清缓存
+  // 是否被临时清空的标记 防止脏读
   private boolean clearOnCommit;
   //commit时要添加的元素
+  // 暂存区
   private Map<Object, Object> entriesToAddOnCommit;
   private Set<Object> entriesMissedInCache;
 
@@ -71,6 +73,7 @@ public class TransactionalCache implements Cache {
     // issue #116
     Object object = delegate.getObject(key);
     if (object == null) {
+      // 缓存空值 防止缓存穿透 用于 BlockingCache
       entriesMissedInCache.add(key);
     }
     // issue #146
@@ -122,6 +125,9 @@ public class TransactionalCache implements Cache {
     entriesMissedInCache.clear();
   }
 
+  /**
+   * 将暂存区的内容提交到二级缓存
+   */
   private void flushPendingEntries() {
     for (Map.Entry<Object, Object> entry : entriesToAddOnCommit.entrySet()) {
       delegate.putObject(entry.getKey(), entry.getValue());

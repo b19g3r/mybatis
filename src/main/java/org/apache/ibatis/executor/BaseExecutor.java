@@ -47,7 +47,7 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
  */
 /**
  * 执行器基类
- * 
+ *
  */
 public abstract class BaseExecutor implements Executor {
 
@@ -65,7 +65,7 @@ public abstract class BaseExecutor implements Executor {
   protected PerpetualCache localOutputParameterCache;
   protected Configuration configuration;
 
-  //查询堆栈
+  //查询堆栈 (用于实现嵌套查询)
   protected int queryStack = 0;
   private boolean closed;
 
@@ -251,7 +251,7 @@ public abstract class BaseExecutor implements Executor {
       cacheKey.update(configuration.getEnvironment().getId());
     }
     return cacheKey;
-  }    
+  }
 
   @Override
   public boolean isCached(MappedStatement ms, CacheKey key) {
@@ -333,7 +333,7 @@ public abstract class BaseExecutor implements Executor {
   //从数据库查
   private <E> List<E> queryFromDatabase(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql) throws SQLException {
     List<E> list;
-    //先向缓存中放入占位符？？？
+    //先向缓存中放入占位符 用于解决子查询中的循环依赖 如歌实现??
     localCache.putObject(key, EXECUTION_PLACEHOLDER);
     try {
       list = doQuery(ms, parameter, rowBounds, resultHandler, boundSql);
@@ -364,7 +364,7 @@ public abstract class BaseExecutor implements Executor {
   public void setExecutorWrapper(Executor wrapper) {
     this.wrapper = wrapper;
   }
-  
+
   //延迟加载
   private static class DeferredLoad {
 
